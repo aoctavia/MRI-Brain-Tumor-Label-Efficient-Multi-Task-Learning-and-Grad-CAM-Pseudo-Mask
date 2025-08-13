@@ -1,45 +1,141 @@
-# MRI Brain Tumor – SSL + Pseudo-Mask + Multi-Task (Classification + Segmentation)
+# 🧠 MRI Brain Tumor – Self-Supervised + Pseudo-Mask + Multi-Task Learning
 
-**Short portfolio project** for PhD applications in Medical Physics / AI-ML.
+[![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/)
+[![PyTorch](https://img.shields.io/badge/PyTorch-1.12+-ee4c2c.svg)](https://pytorch.org/)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+![GitHub last commit](https://img.shields.io/github/last-commit/username/repo-name)
 
-- **Pipeline**: Self-Supervised Learning (SSL) → Grad-CAM **pseudo-masks** → **Multi-task** training → Evaluation → Robustness/Calibration → Export to TorchScript
-- **Dataset (example structure on Drive)**:
-  ```
-  Training/
-      meningioma/ glioma/ pituitary/ notumor/
-  Testing/
-      meningioma/ glioma/ pituitary/ notumor/
-  ```
+> **Short portfolio project** for PhD applications in **Medical Physics / AI-ML**, demonstrating a label-efficient approach for **classification and segmentation** of brain MRI tumors.
 
-## 🔧 Results (Test Set)
-- **Accuracy**: **0.8528**
-- **Macro F1**: **0.8424**
-- **Per-Class**:
-  - Glioma: P=0.9500, R=0.7600, F1=0.8444 (n=300)
-  - Meningioma: P=0.8354, R=0.6634, F1=0.7395 (n=306)
-  - No Tumor: P=0.9151, R=0.9580, F1=0.9361 (n=405)
-  - Pituitary Tumor: P=0.7401, R=0.9967, F1=0.8494 (n=300)
+---
 
-**Confusion Matrix** (as reported):
+## Background
+Brain tumor diagnosis from MRI is challenging due to:
+- Limited **labeled data**, especially segmentation masks.
+- The need for **robust** and **interpretable** models in clinical settings.
+
+**This project addresses the gap by:**
+1. Using **Self-Supervised Learning (SSL)** for feature pretraining without labels.
+2. Generating **pseudo-segmentation masks** via Grad-CAM.
+3. Training a **joint multi-task network** for classification + segmentation.
+
+---
+
+## Dataset
+- **Classes:** Glioma, Meningioma, Pituitary Tumor, No Tumor  
+- **Train:** 4,855 | **Validation:** 857 | **Test:** 1,311  
+- **Structure:**
+```
+
+Training/
+meningioma/ glioma/ pituitary/ notumor/
+Testing/
+meningioma/ glioma/ pituitary/ notumor/
+
+````
+
+---
+
+## Results (Test Set)
+- **Accuracy:** 0.8909
+- **Macro F1:** 0.8837
+- **ROC-AUC (macro):** 0.9842
+- **Segmentation Dice (vs pseudo-mask):** 0.533
+
+| Class           | Precision | Recall | F1-score | Support |
+|-----------------|-----------|--------|----------|---------|
+| Glioma          | 0.9255    | 0.8700 | 0.8969   | 300     |
+| Meningioma      | 0.8715    | 0.7092 | 0.7820   | 306     |
+| No Tumor        | 0.9076    | 0.9704 | 0.9379   | 405     |
+| Pituitary Tumor | 0.8559    | 0.9900 | 0.9181   | 300     |
+
+**Confusion Matrix:**
 
 |                | Pred Glioma | Pred Meningioma | Pred No Tumor | Pred Pituitary |
-|----------------|-------------|------------------|---------------|----------------|
-| **True Glioma**     | 228         | 45               | 0             | 27             |
-| **True Meningioma** | 67          | 203              | 1             | 35             |
-| **True No Tumor**   | 0           | 11               | 388           | 6              |
-| **True Pituitary**  | 0           | 1                | 0             | 299            |
+|----------------|-------------|-----------------|---------------|----------------|
+| **True Glioma**     | 261         | 27              | 0             | 12             |
+| **True Meningioma** | 15          | 217             | 40            | 34             |
+| **True No Tumor**   | 4           | 4               | 393           | 4              |
+| **True Pituitary**  | 2           | 1               | 0             | 297            |
 
-> Additional metrics: **ROC-AUC (macro)** ≈ 0.9842; **Segmentation Dice vs pseudo-mask**: 0.533.
+---
 
-## 🆚 Baseline vs Multi-task
-| Model | Accuracy | Macro F1 |
-|---|---:|---:|
-| **ResNet18 Supervised (single-task)** | 0.8172 | 0.8021 |
+## Baseline vs Multi-task
+| Model                              | Accuracy | Macro F1 |
+|------------------------------------|----------|----------|
+| ResNet18 Supervised (single-task)  | 0.8172   | 0.8021   |
 | **SSL + Pseudo-mask + Multi-task** | **0.8528** | **0.8424** |
 
-> Multi-task improves recall for *meningioma* and overall macro F1.
+> Multi-task learning improved recall for *meningioma* and boosted macro F1 by ~4%.
 
-## 📁 Repository Structure
+---
+
+## Visual Highlights
+**Sample Grad-CAM Overlays**
+<p align="center">
+<img src="figures_samples/glioma_sample.png" width="200"/>
+<img src="figures_samples/meningioma_sample.png" width="200"/>
+<img src="figures_samples/pituitary_sample.png" width="200"/>
+<img src="figures_samples/no_tumor_sample.png" width="200"/>
+</p>
+
+**t-SNE Embedding**
+<p align="center">
+<img src="figures_samples/tsne_plot.png" width="400"/>
+</p>
+
+---
+
+## Novelty Highlights
+- **SSL encoder**: Pretrained without labels, boosting feature quality.
+- **Grad-CAM pseudo-masks**: Enable segmentation training without GT masks.
+- **Joint multi-task**: Improves classification via spatial feature learning.
+- **Robustness & calibration**: Evaluated with noise, blur, and Expected Calibration Error (ECE).
+
+---
+
+## Quickstart (Colab or Local)
+
+### 1. Install Requirements
+```bash
+pip install -r requirements.txt
+````
+
+### 2. Inference (Single Image)
+
+```bash
+python scripts/infer_one.py \
+    --model checkpoints/multitask_resnet18.pt \
+    --image data_examples/sample.png \
+    --out figures_samples/pred_overlay.png
+```
+
+### 3. Export to TorchScript
+
+```bash
+python scripts/export_torchscript.py \
+    --model checkpoints/multitask_resnet18.pt \
+    --out checkpoints/model_scripted.pt
+```
+
+### 4. Evaluate & Visualize
+
+Open the notebook:
+
+```
+notebooks/03_evaluate_and_visualize.ipynb
+```
+
+It will:
+
+* Load predictions & targets (CSV or generated on-the-fly).
+* Compute classification report + confusion matrix.
+* Save 3–5 visual examples per class with Grad-CAM overlay (if available).
+
+---
+
+## Repository Structure
+
 ```
 .
 ├─ notebooks/
@@ -47,48 +143,17 @@
 ├─ scripts/
 │  ├─ infer_one.py
 │  └─ export_torchscript.py
-├─ figures_samples/        # saved overlays go here
-├─ checkpoints/            # place your *.pt / *.pth here
-├─ pseudo_masks/           # grad-cam pseudo masks (optional)
-├─ data_examples/          # a few PNGs for quick demo
+├─ figures_samples/        # Saved overlays
+├─ checkpoints/            # *.pt / *.pth models
+├─ pseudo_masks/           # Grad-CAM pseudo masks
+├─ data_examples/          # Example MRI slices
 ├─ requirements.txt
 └─ README.md
 ```
 
-## 🚀 Quickstart (Colab or local)
-```bash
-pip install -r requirements.txt
-```
+---
 
-### Inference (single image)
-```bash
-python scripts/infer_one.py   --model checkpoints/multitask_resnet18.pt   --image data_examples/sample.png   --out figures_samples/pred_overlay.png
-```
+## Contact & CV
 
-### Export TorchScript
-```bash
-python scripts/export_torchscript.py   --model checkpoints/multitask_resnet18.pt   --out checkpoints/model_scripted.pt
-```
-
-### Evaluate & Visualize
-Open the notebook:
-```
-notebooks/03_evaluate_and_visualize.ipynb
-```
-It will:
-- load predictions & targets (CSV or generated on-the-fly),
-- compute classification report + confusion matrix,
-- save 3–5 visual examples per class with Grad-CAM overlay (if available).
-
-## 🧠 Novelty Highlight
-- **SSL encoder**: label-efficient pretraining for medical images.
-- **Grad-CAM pseudo-masks**: segmentation without GT masks.
-- **Joint multi-task**: improved recognition via spatial inductive signals.
-- **Robustness & calibration**: tested with noise/blur + ECE.
-
-## 📨 Contact & CV
-- **Portfolio owner**: Aulia Octavia — Medical AI / Mobile Dev background
-- **Email**: auliaoctavvia@gmail.com
-- **CV line suggestion**:
-  > *Developed an end-to-end brain MRI pipeline (SSL → pseudo-mask → multi-task), achieving 85.3% test accuracy and 0.842 macro F1; delivered TorchScript export, inference script, and visual interpretability.*
-
+**Portfolio Owner:** Aulia Octavia — Medical AI / Mobile Dev background
+**Email:** [auliaoctavvia@gmail.com](mailto:auliaoctavvia@gmail.com)
